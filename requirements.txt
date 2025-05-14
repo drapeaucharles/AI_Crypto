@@ -1,0 +1,6 @@
+stable-baselines3[extra]
+gym
+pandas
+matplotlib
+ccxt
+numpy
