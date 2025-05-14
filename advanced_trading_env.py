@@ -17,6 +17,8 @@ class AdvancedTradingEnv(gym.Env):
         self.sl_hits = 0
         self.cooldown = 0
 
+        self.max_len = min(len(self.df_15m), len(self.df_1h), len(self.df_2h), len(self.df_4h))
+
         obs_space_size = self.df_15m.shape[1] - 1 + self.df_1h.shape[1] - 1 + self.df_2h.shape[1] - 1 + self.df_4h.shape[1] - 1
         self.action_space = gym.spaces.Box(low=0, high=1, shape=(5,), dtype=np.float32)
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(obs_space_size,), dtype=np.float32)
@@ -24,9 +26,13 @@ class AdvancedTradingEnv(gym.Env):
     def reset(self):
         self.balance = self.initial_balance
         self.positions = []
-        self.current_step = 100  # Skip warmup candles
+        self.current_step = 100
         self.sl_hits = 0
         self.cooldown = 0
+
+        if self.current_step >= self.max_len:
+            raise ValueError("Not enough rows in one of the datasets to initialize the environment.")
+
         return self._get_obs()
 
     def _get_obs(self):
@@ -43,12 +49,11 @@ class AdvancedTradingEnv(gym.Env):
 
         # Decode action
         open_trade = action[0] > 0.5
-        sl_pct = np.clip(action[1], 0.001, 0.01)  # SL between 0.1% to 1%
-        rr_ratio = np.clip(action[2] * 10, 2, 5)   # RR from 1:2 to 1:5
+        sl_pct = np.clip(action[1], 0.001, 0.01)
+        rr_ratio = np.clip(action[2] * 10, 2, 5)
         manual_exit = action[3] > 0.5
         close_index = int(np.clip(action[4] * self.max_positions, 0, self.max_positions - 1))
 
-        # Cooldown check
         if self.cooldown > 0:
             self.cooldown -= 1
         else:
@@ -64,9 +69,8 @@ class AdvancedTradingEnv(gym.Env):
                     "qty": qty,
                     "risk": risk_amount
                 })
-                self.balance -= risk_amount  # Lock capital
+                self.balance -= risk_amount
 
-        # Process open positions
         new_positions = []
         for i, pos in enumerate(self.positions):
             sl, tp, entry, qty, risk = pos["sl"], pos["tp"], pos["entry"], pos["qty"], pos["risk"]
@@ -87,7 +91,7 @@ class AdvancedTradingEnv(gym.Env):
 
         self.positions = new_positions
         self.current_step += 1
-        if self.current_step >= len(self.df_15m) - 1:
+        if self.current_step >= self.max_len - 1:
             done = True
 
         net_worth = self.balance + sum([(price - p["entry"]) * p["qty"] + p["risk"] for p in self.positions])
