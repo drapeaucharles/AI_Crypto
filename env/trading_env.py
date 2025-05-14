@@ -2,41 +2,60 @@ import gym
 import numpy as np
 
 class TradingEnv(gym.Env):
-    def __init__(self, df):
-        super(TradingEnv, self).__init__()
-        self.df = df
+    def __init__(self, df, fee_percent=0.0004):
+        super().__init__()
+        self.df = df.reset_index(drop=True)
+        self.fee_percent = fee_percent
+
+        self.initial_balance = 1000.0
+        self.balance = self.initial_balance
+        self.crypto = 0.0
         self.current_step = 0
+
         self.action_space = gym.spaces.Discrete(3)  # 0 = hold, 1 = buy, 2 = sell
-        self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(6,), dtype=np.float32)
-        self.balance = 1000
-        self.crypto = 0
-        self.last_price = 0
+        self.observation_space = gym.spaces.Box(
+            low=-np.inf,
+            high=np.inf,
+            shape=(df.shape[1] - 1 + 1,),  # features (excluding timestamp) + position flag
+            dtype=np.float32
+        )
 
     def reset(self):
+        self.balance = self.initial_balance
+        self.crypto = 0.0
         self.current_step = 0
-        self.balance = 1000
-        self.crypto = 0
-        self.last_price = 0
-        return self._next_observation()
+        return self._get_obs()
 
-    def _next_observation(self):
-        obs = self.df.iloc[self.current_step][['open', 'high', 'low', 'close', 'volume']].values
-        return np.append(obs, self.crypto)
+    def _get_obs(self):
+        obs = self.df.iloc[self.current_step, 1:].values.astype(np.float32)  # skip timestamp
+        position = np.array([1.0 if self.crypto > 0 else 0.0], dtype=np.float32)
+        return np.concatenate([obs, position])
 
     def step(self, action):
+        done = False
         price = self.df.iloc[self.current_step]['close']
-        if action == 1 and self.balance > price:
-            self.crypto += 1
-            self.balance -= price
-        elif action == 2 and self.crypto > 0:
-            self.crypto -= 1
-            self.balance += price
 
-        self.last_price = price
+        # Execute action
+        if action == 1 and self.crypto == 0:  # Buy
+            self.crypto = self.balance / (price * (1 + self.fee_percent))
+            self.balance = 0.0
+
+        elif action == 2 and self.crypto > 0:  # Sell
+            self.balance = self.crypto * price * (1 - self.fee_percent)
+            self.crypto = 0.0
+
         self.current_step += 1
-        done = self.current_step >= len(self.df) - 1
-        reward = self.balance + self.crypto * price - 1000
-        return self._next_observation(), reward, done, {}
+        if self.current_step >= len(self.df) - 1:
+            done = True
 
-    def render(self, mode='human'):
-        print(f"Step: {self.current_step}, Balance: {self.balance}, Crypto: {self.crypto}")
+        # Calculate reward (change in net worth)
+        net_worth = self.balance + self.crypto * price
+        reward = net_worth - self.initial_balance
+        self.initial_balance = net_worth
+
+        return self._get_obs(), reward, done, {}
+
+    def render(self, mode="human"):
+        price = self.df.iloc[self.current_step]['close']
+        net_worth = self.balance + self.crypto * price
+        print(f"Step {self.current_step} | Price: {price:.2f} | Balance: {self.balance:.2f} | Crypto: {self.crypto:.4f} | Net Worth: {net_worth:.2f}")
