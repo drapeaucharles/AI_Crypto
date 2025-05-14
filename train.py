@@ -17,7 +17,7 @@ env = AdvancedTradingEnv(df_15m, df_1h, df_2h, df_4h)
 
 # Train model
 model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_logs_advanced")
-model.learn(total_timesteps=100_000_000)
+model.learn(total_timesteps=15_000_000)
 
 # Save model
 model.save("models/ppo_btc_advanced")
