@@ -100,8 +100,3 @@ class AdvancedTradingEnv(gym.Env):
         net_worth = self.balance + sum([(price - p["entry"]) * p["qty"] + p["risk"] for p in self.positions])
         print(f"Step {self.current_step} | Price: {price:.2f} | Balance: {self.balance:.2f} | Positions: {len(self.positions)} | Net Worth: {net_worth:.2f}")
 """
-
-with open("/mnt/data/advanced_trading_env.py", "w") as f:
-    f.write(env_code)
-
-"/mnt/data/advanced_trading_env.py"
