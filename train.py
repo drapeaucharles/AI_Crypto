@@ -1,26 +1,24 @@
+
 from stable_baselines3 import PPO
-from env.trading_env import TradingEnv
+from advanced_trading_env import AdvancedTradingEnv
 import pandas as pd
 import os
 
 os.makedirs("models", exist_ok=True)
 
-timeframes = {
-    "15m": "data/btc_15m_features.csv",
-    "1h": "data/btc_1h_features.csv",
-    "2h": "data/btc_2h_features.csv",
-    "4h": "data/btc_4h_features.csv"
-}
+# Load datasets
+df_15m = pd.read_csv("data/btc_15m_features.csv")
+df_1h = pd.read_csv("data/btc_1h_features.csv")
+df_2h = pd.read_csv("data/btc_2h_features.csv")
+df_4h = pd.read_csv("data/btc_4h_features.csv")
 
-for tf, path in timeframes.items():
-    print(f"\n📊 Training PPO model for timeframe: {tf}")
+# Create environment
+env = AdvancedTradingEnv(df_15m, df_1h, df_2h, df_4h)
 
-    df = pd.read_csv(path).dropna().reset_index(drop=True)
-    env = TradingEnv(df, fee_percent=0.0004)
+# Train model
+model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./ppo_logs_advanced")
+model.learn(total_timesteps=100_000)
 
-    model = PPO("MlpPolicy", env, verbose=1, tensorboard_log=f"./ppo_logs_{tf}")
-    model.learn(total_timesteps=100_000)
-
-    model_path = f"models/ppo_btc_{tf}.zip"
-    model.save(model_path)
-    print(f"✅ Model saved to {model_path}")
+# Save model
+model.save("models/ppo_btc_advanced")
+print("✅ Model trained and saved.")
