@@ -16,7 +16,6 @@ class AdvancedTradingEnv(gym.Env):
         self.balance = self.initial_balance
         self.crypto = 0.0
         self.current_step = 0
-
         self.position = None
         self.trades = []
 
@@ -28,8 +27,8 @@ class AdvancedTradingEnv(gym.Env):
         self.balance = self.initial_balance
         self.crypto = 0.0
         self.current_step = 0
-        self.trades = []
         self.position = None
+        self.trades = []
         return self._get_obs()
 
     def _get_obs(self):
@@ -45,10 +44,10 @@ class AdvancedTradingEnv(gym.Env):
         price = self.df_15m.iloc[self.current_step]["close"]
         reward = 0.0
 
-        if isinstance(action_info, tuple):
-            action, sl_pct, tp_pct = action_info
-            sl_pct = float(sl_pct)
-            tp_pct = float(tp_pct)
+        if isinstance(action_info, tuple) or isinstance(action_info, list):
+            action = int(action_info[0])
+            sl_pct = float(action_info[1])
+            tp_pct = float(action_info[2])
         else:
             action = action_info
             sl_pct = 0.01
