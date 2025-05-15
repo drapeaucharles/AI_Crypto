@@ -19,7 +19,14 @@ class AdvancedTradingEnv(gym.Env):
         self.position = None
         self.trades = []
 
-        obs_len = df_15m.shape[1] - 1 + df_1h.shape[1] - 1 + df_2h.shape[1] - 1 + df_4h.shape[1] - 1 + 1
+        self.max_step = min(
+            len(self.df_15m),
+            len(self.df_1h),
+            len(self.df_2h),
+            len(self.df_4h)
+        ) - 1
+
+        obs_len = self.df_15m.shape[1] - 1 + self.df_1h.shape[1] - 1 + self.df_2h.shape[1] - 1 + self.df_4h.shape[1] - 1 + 1
         self.action_space = gym.spaces.Discrete(3)
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(obs_len,), dtype=np.float32)
 
@@ -72,7 +79,7 @@ class AdvancedTradingEnv(gym.Env):
             self.balance = 0.0
 
         self.current_step += 1
-        if self.current_step >= len(self.df_15m) - 1:
+        if self.current_step >= self.max_step:
             done = True
 
         net_worth = self.balance + self.crypto * price
