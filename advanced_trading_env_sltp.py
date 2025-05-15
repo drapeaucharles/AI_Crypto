@@ -19,13 +19,6 @@ class AdvancedTradingEnv(gym.Env):
         self.position = None
         self.trades = []
 
-        self.max_step = min(
-            len(self.df_15m),
-            len(self.df_1h),
-            len(self.df_2h),
-            len(self.df_4h)
-        ) - 1
-
         obs_len = self.df_15m.shape[1] - 1 + self.df_1h.shape[1] - 1 + self.df_2h.shape[1] - 1 + self.df_4h.shape[1] - 1 + 1
         self.action_space = gym.spaces.Discrete(3)
         self.observation_space = gym.spaces.Box(low=-np.inf, high=np.inf, shape=(obs_len,), dtype=np.float32)
@@ -36,6 +29,15 @@ class AdvancedTradingEnv(gym.Env):
         self.current_step = 0
         self.position = None
         self.trades = []
+
+        # ✅ Ensure consistency across subprocesses
+        self.max_step = min(
+            len(self.df_15m),
+            len(self.df_1h),
+            len(self.df_2h),
+            len(self.df_4h)
+        ) - 1
+
         return self._get_obs()
 
     def _get_obs(self):
