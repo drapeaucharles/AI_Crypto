@@ -26,7 +26,6 @@ class MultiOutputPolicy(ActorCriticPolicy):
             features_extractor_class=MultiOutputExtractor,
             **kwargs,
         )
-        # Correct latent dim access
         latent_dim = self.mlp_extractor.latent_dim_pi
         self.sl_head = nn.Sequential(nn.Linear(latent_dim, 1), nn.Sigmoid())
         self.tp_head = nn.Sequential(nn.Linear(latent_dim, 1), nn.Sigmoid())
@@ -38,10 +37,15 @@ class MultiOutputPolicy(ActorCriticPolicy):
         actions = distribution.get_actions(deterministic=deterministic)
         log_prob = distribution.log_prob(actions)
         values = self.value_net(latent_vf)
-        sl = self.sl_head(latent_pi)
-        tp = self.tp_head(latent_pi)
-        return actions, values, log_prob, sl, tp
+        return actions, values, log_prob  # ✅ Must match SB3 expected output
 
     def predict(self, obs, deterministic=False):
-        actions, _, _, sl, tp = self.forward(obs, deterministic)
-        return actions, sl.detach().cpu().numpy(), tp.detach().cpu().numpy()
+        actions, _, _ = self.forward(obs, deterministic)
+        return actions
+
+    def predict_sl_tp(self, obs):
+        features = self.extract_features(obs)
+        latent_pi, _ = self.mlp_extractor(features)
+        sl = self.sl_head(latent_pi)
+        tp = self.tp_head(latent_pi)
+        return sl, tp
