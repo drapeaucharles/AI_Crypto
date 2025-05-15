@@ -39,11 +39,15 @@ print(f"📝 Exported trades to {trade_file}")
 
 df_trades = pd.read_csv(trade_file)
 total_trades = len(df_trades)
-wins = df_trades[df_trades['pnl'] > 0]
-losses = df_trades[df_trades['pnl'] <= 0]
-sl_hits = df_trades[df_trades['exit_reason'] == 'SL']
-tp_hits = df_trades[df_trades['exit_reason'] == 'TP']
-manual_exits = df_trades[df_trades['exit_reason'] == 'MANUAL']
+
+if 'exit_reason' in df_trades.columns:
+    sl_hits = df_trades[df_trades['exit_reason'] == 'SL']
+    tp_hits = df_trades[df_trades['exit_reason'] == 'TP']
+    manual_exits = df_trades[df_trades['exit_reason'] == 'MANUAL']
+else:
+    print("⚠️ 'exit_reason' not found in trades. Assuming all exits are manual or unknown.")
+    sl_hits = tp_hits = []
+    manual_exits = df_trades
 
 # Final net worth
 final_net = net_worths[-1]
@@ -54,12 +58,11 @@ profit_pct = (final_net - initial_balance) / initial_balance * 100
 print("📊 Evaluation Summary:")
 print(f"📈 Final Net Worth: ${final_net:.2f}")
 print(f"💼 Total Trades: {total_trades}")
-print(f"🏆 Win Rate: {len(wins) / total_trades * 100:.2f}%")
+print(f"🏆 Win Rate: {len(df_trades[df_trades['pnl'] > 0]) / total_trades * 100:.2f}%")
 print(f"💥 SL Hits: {len(sl_hits)} ({len(sl_hits)/total_trades*100:.1f}%)")
 print(f"🎯 TP Hits: {len(tp_hits)} ({len(tp_hits)/total_trades*100:.1f}%)")
 print(f"🛑 Manual Exits: {len(manual_exits)}")
 print(f"📉 Max Drawdown: {min(df_trades['pnl'].cumsum()):.2f}")
-print(f"💹 Avg R:R (TP/SL): ~2:1 expected")
 
 # Optional: Plot equity curve
 plt.plot(net_worths)
