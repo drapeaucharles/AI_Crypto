@@ -2,8 +2,14 @@
 import os
 import glob
 import pandas as pd
+import warnings
+import logging
 from stable_baselines3 import PPO
 from advanced_trading_env import AdvancedTradingEnv
+
+# Suppress noisy SB3 warnings
+warnings.filterwarnings("ignore")
+logging.getLogger().setLevel(logging.ERROR)
 
 # Load data
 df_15m = pd.read_csv("data/btc_15m_features.csv")
@@ -23,7 +29,7 @@ for path in model_paths:
     print(f"📦 Evaluating: {checkpoint_name}")
 
     env = AdvancedTradingEnv(df_15m, df_1h, df_2h, df_4h)
-    model = PPO.load(path)
+    model = PPO.load(path, device='cpu')  # Force to CPU to suppress GPU warning
 
     obs = env.reset()
     done = False
@@ -53,7 +59,7 @@ for path in model_paths:
 
     summary.append({
         "Checkpoint": checkpoint_name,
-        "NetWorth": final_net,
+        "NetWorth": round(final_net, 2),
         "Trades": total_trades,
         "WinRate %": round(win_rate, 2),
         "SL": sl_count,
@@ -62,8 +68,12 @@ for path in model_paths:
         "Drawdown": round(max_drawdown, 2)
     })
 
-# Display table
+# Display clean table
 df_summary = pd.DataFrame(summary)
-df_summary.to_csv("models/eval_summary.csv", index=False)
+df_summary.sort_values(by="Checkpoint", inplace=True)
+df_summary.reset_index(drop=True, inplace=True)
+
+print("\n📊 Evaluation Summary (all checkpoints):\n")
 print(df_summary.to_string(index=False))
-print("✅ Full summary saved to models/eval_summary.csv")
+df_summary.to_csv("models/eval_summary.csv", index=False)
+print("\n✅ Summary saved to models/eval_summary.csv")
