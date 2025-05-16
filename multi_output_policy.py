@@ -8,13 +8,13 @@ from torch.distributions import Categorical
 class MultiOutputPolicy(ActorCriticPolicy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         self.sl_head = None
         self.tp_head = None
 
-    def _build_mlp_extractor(self):
-        super()._build_mlp_extractor()
+    def _build(self, lr_schedule):
+        super()._build(lr_schedule)
 
+        # Build SL/TP prediction heads after extractor is available
         self.sl_head = nn.Sequential(
             nn.Linear(self.mlp_extractor.latent_dim_pi, 1),
             nn.Sigmoid()
@@ -37,9 +37,9 @@ class MultiOutputPolicy(ActorCriticPolicy):
         log_prob = dist.log_prob(action)
 
         if torch.isnan(action_logits).any():
-            print("❌ NaN detected in action logits")
+            print("❌ NaN in action logits")
         if torch.isnan(sl).any() or torch.isnan(tp).any():
-            print("❌ NaN detected in SL/TP predictions")
+            print("❌ NaN in SL/TP outputs")
 
         return action, log_prob, self.value_net(latent_vf), sl, tp
 
