@@ -8,13 +8,11 @@ from torch.distributions import Categorical
 class MultiOutputPolicy(ActorCriticPolicy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.sl_head = None
-        self.tp_head = None
+        self._build_mlp_extractor()  # Ensure everything is initialized
 
-    def _build(self, lr_schedule):
-        super()._build(lr_schedule)
+    def _build_mlp_extractor(self):
+        super()._build_mlp_extractor()
 
-        # Build SL/TP prediction heads after extractor is available
         self.sl_head = nn.Sequential(
             nn.Linear(self.mlp_extractor.latent_dim_pi, 1),
             nn.Sigmoid()
