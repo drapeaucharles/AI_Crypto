@@ -7,7 +7,13 @@ from torch.distributions import Categorical
 
 class MultiOutputPolicy(ActorCriticPolicy):
     def __init__(self, *args, **kwargs):
-        super(MultiOutputPolicy, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
+
+        self.sl_head = None
+        self.tp_head = None
+
+    def _build_mlp_extractor(self):
+        super()._build_mlp_extractor()
 
         self.sl_head = nn.Sequential(
             nn.Linear(self.mlp_extractor.latent_dim_pi, 1),
@@ -17,16 +23,6 @@ class MultiOutputPolicy(ActorCriticPolicy):
             nn.Linear(self.mlp_extractor.latent_dim_pi, 1),
             nn.Sigmoid()
         )
-
-        self._build()
-
-    def _build_mlp_extractor(self):
-        self.mlp_extractor = self.mlp_extractor_class(
-            self.features_dim, net_arch=self.net_arch, activation_fn=self.activation_fn, device=self.device
-        )
-
-        self.action_net = nn.Linear(self.mlp_extractor.latent_dim_pi, self.action_space.n)
-        self.value_net = nn.Linear(self.mlp_extractor.latent_dim_vf, 1)
 
     def forward(self, obs, deterministic=False):
         features = self.extract_features(obs)
