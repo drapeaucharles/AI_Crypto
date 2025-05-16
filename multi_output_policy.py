@@ -8,11 +8,10 @@ from torch.distributions import Categorical
 class MultiOutputPolicy(ActorCriticPolicy):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._build_mlp_extractor()  # Ensure everything is initialized
+        self._build_mlp_extractor()
 
     def _build_mlp_extractor(self):
         super()._build_mlp_extractor()
-
         self.sl_head = nn.Sequential(
             nn.Linear(self.mlp_extractor.latent_dim_pi, 1),
             nn.Sigmoid()
@@ -27,22 +26,17 @@ class MultiOutputPolicy(ActorCriticPolicy):
         latent_pi, latent_vf = self.mlp_extractor(features)
 
         action_logits = self.action_net(latent_pi)
-        sl = torch.clamp(self.sl_head(latent_pi), 0.002, 0.05)
-        tp = torch.clamp(self.tp_head(latent_pi), 0.004, 0.10)
+        self._last_sl = torch.clamp(self.sl_head(latent_pi), 0.002, 0.05)
+        self._last_tp = torch.clamp(self.tp_head(latent_pi), 0.004, 0.10)
 
         dist = Categorical(logits=action_logits)
         action = dist.probs.argmax(dim=1) if deterministic else dist.sample()
         log_prob = dist.log_prob(action)
 
-        if torch.isnan(action_logits).any():
-            print("❌ NaN in action logits")
-        if torch.isnan(sl).any() or torch.isnan(tp).any():
-            print("❌ NaN in SL/TP outputs")
-
-        return action, log_prob, self.value_net(latent_vf), sl, tp
+        return action, log_prob, self.value_net(latent_vf)
 
     def _predict(self, obs, deterministic=False):
-        action, _, _, _, _ = self.forward(obs, deterministic)
+        action, _, _ = self.forward(obs, deterministic)
         return action
 
     def evaluate_actions(self, obs, actions):
