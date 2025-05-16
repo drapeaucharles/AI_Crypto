@@ -102,7 +102,7 @@ class AdvancedTradingEnv(gym.Env):
             self.balance = 0.0
 
         self.current_step += 1
-        if self.current_step >= self.max_step:
+        if self.current_step >= self.max_step
             done = True
 
         net_worth = self.balance + (
