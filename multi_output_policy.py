@@ -31,7 +31,7 @@ class MultiOutputPolicy(ActorCriticPolicy):
 
         dist = Categorical(logits=action_logits)
         action = dist.probs.argmax(dim=1) if deterministic else dist.sample()
-        log_prob = dist.log_prob(action)
+        log_prob = dist.log_prob(action).view(-1)
 
         return action, log_prob, self.value_net(latent_vf)
 
@@ -45,7 +45,7 @@ class MultiOutputPolicy(ActorCriticPolicy):
 
         logits = self.action_net(latent_pi)
         dist = Categorical(logits=logits)
-        log_prob = dist.log_prob(actions)
+        log_prob = dist.log_prob(actions).view(-1)
         entropy = dist.entropy()
         value = self.value_net(latent_vf)
 
